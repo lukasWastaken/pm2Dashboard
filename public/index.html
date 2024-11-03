@@ -11,6 +11,7 @@
         th { background-color: #f2f2f2; }
         button { margin: 0 5px; }
     </style>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <h1>PM2 Process Dashboard</h1>
@@ -49,28 +50,32 @@
                 processMap[key].count++;
             });
 
-            // Render each unique process with count
-            for (const [name, info] of Object.entries(processMap)) {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${info.name} (${info.count})</td>
-                    <td>${info.version || 'N/A'}</td>
-                    <td>${formatUptime(info.uptime)}</td>
-                    <td>${info.cpu}</td>
-                    <td>${(info.memory / 1024 / 1024).toFixed(2)}</td>
-                    <td>
-                        <button onclick="manageProcess('${info.name}', '${info.status === 'online' ? 'stop' : 'start'}')">
-                            ${info.status === 'online' ? 'Stop' : 'Start'}
-                        </button>
-                        <button onclick="manageProcess('${info.name}', 'restart')">Restart</button>
-                        ${info.status === 'stopped' ? 
-                            `<button onclick="deleteProcess('${info.name}')">Delete</button>` : 
-                            ''
-                        }
-                    </td>
-                `;
-                processBody.appendChild(row);
-            }
+        for (const [name, info] of Object.entries(processMap)) {
+            const row = document.createElement('tr');
+            const statusClass = info.status === 'online' ? 'running' : 'stopped'; // Determine status class
+            row.innerHTML = `
+                <td>
+                    <span class="status-dot ${statusClass}"></span> <!-- Add status dot -->
+                    ${info.name} (${info.count})
+                </td>
+                <td>${info.version || 'N/A'}</td>
+                <td>${formatUptime(info.uptime)}</td>
+                <td>${info.cpu}</td>
+                <td>${(info.memory / 1024 / 1024).toFixed(2)}</td>
+                <td>
+                    <button onclick="manageProcess('${info.name}', '${info.status === 'online' ? 'stop' : 'start'}')">
+                        ${info.status === 'online' ? 'Stop' : 'Start'}
+                    </button>
+                    <button onclick="manageProcess('${info.name}', 'restart')">Restart</button>
+                    ${info.status === 'stopped' ? 
+                        `<button onclick="deleteProcess('${info.name}')">Delete</button>` : 
+                        ''
+                    }
+                </td>
+            `;
+            processBody.appendChild(row);
+        }
+
         }
 
         function formatUptime(uptime) {
