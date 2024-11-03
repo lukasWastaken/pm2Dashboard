@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PM2 Process Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        button { margin: 0 5px; }
+    </style>
+</head>
+<body>
+    <h1>PM2 Process Dashboard</h1>
+    <table id="process-table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Version</th>
+                <th>Uptime</th>
+                <th>CPU (%)</th>
+                <th>Memory (MB)</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="process-body"></tbody>
+    </table>
+
+    <script>
+        async function fetchProcesses() {
+            const response = await fetch('/api/processes');
+            const processes = await response.json();
+            const processBody = document.getElementById('process-body');
+            processBody.innerHTML = '';
+
+            const processMap = {};
+
+            // Organize processes by name and count them
+            processes.forEach(process => {
+                const key = process.name;
+                if (!processMap[key]) {
+                    processMap[key] = {
+                        count: 0,
+                        ...process,
+                    };
+                }
+                processMap[key].count++;
+            });
+
+            // Render each unique process with count
+            for (const [name, info] of Object.entries(processMap)) {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${info.name} (${info.count})</td>
+                    <td>${info.version || 'N/A'}</td>
+                    <td>${formatUptime(info.uptime)}</td>
+                    <td>${info.cpu}</td>
+                    <td>${(info.memory / 1024 / 1024).toFixed(2)}</td>
+                    <td>
+                        <button onclick="manageProcess('${info.name}', '${info.status === 'online' ? 'stop' : 'start'}')">
+                            ${info.status === 'online' ? 'Stop' : 'Start'}
+                        </button>
+                        <button onclick="manageProcess('${info.name}', 'restart')">Restart</button>
+                        ${info.status === 'stopped' ? 
+                            `<button onclick="deleteProcess('${info.name}')">Delete</button>` : 
+                            ''
+                        }
+                    </td>
+                `;
+                processBody.appendChild(row);
+            }
+        }
+
+        function formatUptime(uptime) {
+            return uptime ? new Date(uptime).toISOString().substr(11, 8) : 'N/A';
+        }
+
+        async function manageProcess(name, action) {
+            const response = await fetch(`/api/process/${action}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+            });
+            const result = await response.json();
+            console.log(result.message);
+            fetchProcesses(); // Refresh the process list
+        }
+
+        async function deleteProcess(name) {
+            const response = await fetch(`/api/process/${name}`, {
+                method: 'DELETE'
+            });
+            const result = await response.json();
+            console.log(result.message);
+            fetchProcesses(); // Refresh the process list
+        }
+
+        async function stopAllInstances(clusterName) {
+            const response = await fetch('/api/process/stop-cluster', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: clusterName })
+            });
+            const result = await response.json();
+            console.log(result.message);
+            fetchProcesses(); // Refresh the process list
+        }
+
+        // Fetch processes every 5 seconds
+        setInterval(fetchProcesses, 5000);
+        // Initial fetch
+        fetchProcesses();
+    </script>
+</body>
+</html>
