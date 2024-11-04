@@ -41,7 +41,7 @@ app.get('/api/processes', async (req, res) => {
 
 // API endpoint to start or stop a process by name
 app.post('/api/process/:action', (req, res) => {
-    const { name } = req.body; // Use name instead of id
+    const { name } = req.body;
     const action = req.params.action;
 
     if (action === 'start') {
