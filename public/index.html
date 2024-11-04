@@ -38,7 +38,6 @@
 
             const processMap = {};
 
-            // Organize processes by name and count them
             processes.forEach(process => {
                 const key = process.name;
                 if (!processMap[key]) {
@@ -50,32 +49,32 @@
                 processMap[key].count++;
             });
 
-        for (const [name, info] of Object.entries(processMap)) {
-            const row = document.createElement('tr');
-            const statusClass = info.status === 'online' ? 'running' : 'stopped'; // Determine status class
-            row.innerHTML = `
-                <td>
-                    <span class="status-dot ${statusClass}"></span> <!-- Add status dot -->
-                    ${info.name} (${info.count})
-                </td>
-                <td>${info.version || 'N/A'}</td>
-                <td>${formatUptime(info.uptime)}</td>
-                <td>${info.cpu}</td>
-                <td>${(info.memory / 1024 / 1024).toFixed(2)}</td>
-                <td>
-                    <button onclick="manageProcess('${info.name}', '${info.status === 'online' ? 'stop' : 'start'}')">
-                        ${info.status === 'online' ? 'Stop' : 'Start'}
-                    </button>
-                    <button onclick="manageProcess('${info.name}', 'restart')">Restart</button>
-                    ${info.status === 'stopped' ? 
-                        `<button onclick="deleteProcess('${info.name}')">Delete</button>` : 
-                        ''
-                    }
-                </td>
-            `;
-            processBody.appendChild(row);
-        }
-
+            for (const [name, info] of Object.entries(processMap)) {
+                const row = document.createElement('tr');
+                const statusClass = info.status === 'online' ? 'running' : 'stopped';
+                row.innerHTML = `
+                    <td>
+                        <span class="status-dot ${statusClass}"></span>
+                        ${info.name} (${info.count})
+                    </td>
+                    <td>${info.version || 'N/A'}</td>
+                    <td>${formatUptime(info.uptime)}</td>
+                    <td>${info.cpu}</td>
+                    <td>${(info.memory / 1024 / 1024).toFixed(2)}</td>
+                    <td>
+                        <button onclick="manageProcess('${info.name}', '${info.status === 'online' ? 'stop' : 'start'}')">
+                            ${info.status === 'online' ? 'Stop' : 'Start'}
+                        </button>
+                        <button onclick="manageProcess('${info.name}', 'restart')">Restart</button>
+                        ${info.status === 'stopped' ? 
+                            `<button onclick="deleteProcess('${info.name}')">Delete</button>` : 
+                            ''
+                        }
+                        <button onclick="scaleProcess('${info.name}')">Scale</button> <!-- Scale button -->
+                    </td>
+                `;
+                processBody.appendChild(row);
+            }
         }
 
         function formatUptime(uptime) {
@@ -90,7 +89,7 @@
             });
             const result = await response.json();
             console.log(result.message);
-            fetchProcesses(); // Refresh the process list
+            fetchProcesses();
         }
 
         async function deleteProcess(name) {
@@ -99,23 +98,27 @@
             });
             const result = await response.json();
             console.log(result.message);
-            fetchProcesses(); // Refresh the process list
+            fetchProcesses();
         }
 
-        async function stopAllInstances(clusterName) {
-            const response = await fetch('/api/process/stop-cluster', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: clusterName })
-            });
-            const result = await response.json();
-            console.log(result.message);
-            fetchProcesses(); // Refresh the process list
+        async function scaleProcess(name) {
+            const instances = prompt(`Enter the number of instances to scale for ${name}:`);
+            if (instances && parseInt(instances) > 0) {
+                const response = await fetch('/api/process/scale', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, instances: parseInt(instances) })
+                });
+                const result = await response.json();
+                console.log(result.message);
+                fetchProcesses();
+            } else {
+                alert("Please enter a valid number of instances.");
+            }
         }
 
-        // Fetch processes every 5 seconds
-        setInterval(fetchProcesses, 5000);
-        // Initial fetch
+        // Initial and periodic fetch
+        setInterval(fetchProcesses, 1000);
         fetchProcesses();
     </script>
 </body>
